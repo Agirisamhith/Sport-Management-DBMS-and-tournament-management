@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Manage tournaments, fixtures and results."/>
+  <title>Tournaments — WoxuDB</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <div><span>WoxuDB<small>Management System</small></span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="/" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+      <a href="/reports" class="nav-item"><span class="nav-icon"></span> Reports</a>
+      <div class="nav-section-label">Club</div>
+      <a href="/members" class="nav-item"><span class="nav-icon"></span> Members</a>
+      <a href="/sports" class="nav-item"><span class="nav-icon"></span> Sports</a>
+      <a href="/teams" class="nav-item"><span class="nav-icon"></span> Teams</a>
+      <a href="/tournaments" class="nav-item"><span class="nav-icon"></span> Tournaments</a>
+      <div class="nav-section-label">Resources</div>
+      <a href="/equipment" class="nav-item"><span class="nav-icon"></span> Equipment</a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Tournaments</div>
+        <div class="topbar-subtitle">Tournament and fixture management</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('modal-add')">+ New Tournament</button>
+    </div>
+
+    <div class="page-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title">All Tournaments</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Tournament</th><th>Sport</th>
+              <th>Start</th><th>End</th><th>Fixtures</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="tournament-table"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mt-4" id="fixtures-card" style="display:none;">
+        <div class="card-header">
+          <span class="card-title" id="fixtures-title">Fixtures</span>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('fixtures-card').style.display='none'"> Close</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr>
+              <th>Fixture</th><th>Facility</th><th>Time</th><th>Participants</th>
+            </tr></thead>
+            <tbody id="fixture-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Create Tournament</span>
+      <button class="modal-close" onclick="closeModal('modal-add')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="submitAdd(event)">
+        <div class="form-group">
+          <label class="form-label">Tournament Name *</label>
+          <input class="form-control" id="add-name" required placeholder="Summer League 2026"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sport *</label>
+          <select class="form-control" id="add-sport" required></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Start Date *</label>
+            <input class="form-control" id="add-start" type="date" required/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date *</label>
+            <input class="form-control" id="add-end" type="date" required/>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding:0;border:0;margin-top:8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/main.js"></script>
+<script>
+async function loadTournaments() {
+  try {
+    const data = await apiGet('/tournaments/');
+    const tbody = document.getElementById('tournament-table');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"></div><p>No tournaments yet</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(t => `
+      <tr>
+        <td class="text-muted">#${t.tournament_id}</td>
+        <td class="font-bold">${t.name}</td>
+        <td>${t.sport_name}</td>
+        <td>${formatDate(t.start_date)}</td>
+        <td>${formatDate(t.end_date)}</td>
+        <td><span class="badge badge-info">${t.fixture_count} fixtures</span></td>
+        <td>
+          <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm" onclick="viewFixtures(${t.tournament_id}, '${t.name}')">View</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteTournament(${t.tournament_id})">Delete</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function viewFixtures(id, name) {
+  const card = document.getElementById('fixtures-card');
+  document.getElementById('fixtures-title').textContent = `Fixtures — ${name}`;
+  card.style.display = 'block';
+  const tbody = document.getElementById('fixture-table');
+  tbody.innerHTML = '<tr><td colspan="4" class="loading">Loading...</td></tr>';
+  try {
+    const fixtures = await apiGet(`/tournaments/${id}/fixtures`);
+    if (!fixtures.length) {
+      tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>No fixtures scheduled</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = fixtures.map(f => {
+      const participants = (f.participants || []).filter(p => p.team_id);
+      return `<tr>
+        <td>#${f.fixture_id}</td>
+        <td>${f.facility_name}</td>
+        <td>${formatDateTime(f.start_time)}</td>
+        <td>${participants.map(p => `<span class="badge badge-info">${p.team_name} (${p.score}pts)</span>`).join(' ') || '—'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function loadSports() {
+  const sports = await apiGet('/sports/');
+  document.getElementById('add-sport').innerHTML =
+    sports.map(s => `<option value="${s.sport_id}">${s.name}</option>`).join('');
+}
+
+async function submitAdd(e) {
+  e.preventDefault();
+  try {
+    await apiPost('/tournaments/', {
+      name:       document.getElementById('add-name').value,
+      sport_id:   parseInt(document.getElementById('add-sport').value),
+      start_date: document.getElementById('add-start').value,
+      end_date:   document.getElementById('add-end').value,
+    });
+    closeModal('modal-add');
+    showToast('Tournament created!', 'success');
+    loadTournaments();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteTournament(id) {
+  if (!confirm('Delete this tournament and all its fixtures?')) return;
+  try {
+    await apiDelete('/tournaments/' + id);
+    showToast('Tournament deleted.', 'warning');
+    loadTournaments();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+loadSports();
+loadTournaments();
+</script>
+</body>
+</html>

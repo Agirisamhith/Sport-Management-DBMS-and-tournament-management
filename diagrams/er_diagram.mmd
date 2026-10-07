@@ -1,0 +1,154 @@
+mermaid
+erDiagram
+    MEMBER {
+        int member_id PK
+        string first_name
+        string last_name
+        string email UK
+        string phone
+        date join_date
+    }
+    
+    MEMBERSHIP_PLAN {
+        int plan_id PK
+        string name UK
+        string description
+        decimal price
+        int duration_days
+    }
+    
+    MEMBERSHIP {
+        int membership_id PK
+        int member_id FK
+        int plan_id FK
+        date start_date
+        date end_date
+        string status
+    }
+    
+    PAYMENT {
+        int payment_id PK
+        int member_id FK
+        decimal amount
+        date payment_date
+        string payment_method
+    }
+    
+    SPORT {
+        int sport_id PK
+        string name UK
+        string description
+    }
+    
+    COACH {
+        int coach_id PK
+        string first_name
+        string last_name
+        string email UK
+        string specialization
+    }
+    
+    TEAM {
+        int team_id PK
+        int sport_id FK
+        string name
+        int max_capacity
+    }
+    
+    TEAM_MEMBER {
+        int team_id PK, FK
+        int member_id PK, FK
+        date join_date
+    }
+    
+    TEAM_COACH {
+        int team_id PK, FK
+        int coach_id PK, FK
+        string role
+    }
+    
+    FACILITY {
+        int facility_id PK
+        string name UK
+        string facility_type
+        int capacity
+    }
+    
+    TRAINING_SESSION {
+        int session_id PK
+        int facility_id FK
+        int team_id FK
+        int coach_id FK
+        timestamp start_time
+        timestamp end_time
+    }
+    
+    TOURNAMENT {
+        int tournament_id PK
+        int sport_id FK
+        string name
+        date start_date
+        date end_date
+    }
+    
+    FIXTURE {
+        int fixture_id PK
+        int tournament_id FK
+        int facility_id FK
+        timestamp start_time
+        string status
+    }
+    
+    FIXTURE_PARTICIPANT {
+        int participant_id PK
+        int fixture_id FK
+        int team_id FK "Optional"
+        int member_id FK "Optional"
+    }
+    
+    RESULT {
+        int result_id PK
+        int fixture_id FK
+        int participant_id FK
+        int score
+        boolean is_winner
+    }
+    
+    EQUIPMENT {
+        int equipment_id PK
+        string name
+        string category
+        int total_stock
+        int available_stock
+    }
+    
+    EQUIPMENT_ISSUE {
+        int issue_id PK
+        int equipment_id FK
+        int member_id FK
+        date issue_date
+        date return_date
+        string status
+    }
+
+    MEMBER ||--o{ MEMBERSHIP : "has"
+    MEMBERSHIP_PLAN ||--o{ MEMBERSHIP : "defines"
+    MEMBER ||--o{ PAYMENT : "makes"
+    SPORT ||--o{ TEAM : "categorizes"
+    TEAM ||--o{ TEAM_MEMBER : "includes"
+    MEMBER ||--o{ TEAM_MEMBER : "joins"
+    TEAM ||--o{ TEAM_COACH : "trained by"
+    COACH ||--o{ TEAM_COACH : "trains"
+    FACILITY ||--o{ TRAINING_SESSION : "hosts"
+    TEAM ||--o{ TRAINING_SESSION : "attends"
+    COACH ||--o{ TRAINING_SESSION : "leads"
+    SPORT ||--o{ TOURNAMENT : "features"
+    TOURNAMENT ||--o{ FIXTURE : "contains"
+    FACILITY ||--o{ FIXTURE : "hosts"
+    FIXTURE ||--|{ FIXTURE_PARTICIPANT : "involves"
+    TEAM ||--o{ FIXTURE_PARTICIPANT : "competes as"
+    MEMBER ||--o{ FIXTURE_PARTICIPANT : "competes as"
+    FIXTURE ||--o{ RESULT : "produces"
+    FIXTURE_PARTICIPANT ||--o{ RESULT : "achieves"
+    MEMBER ||--o{ EQUIPMENT_ISSUE : "borrows"
+    EQUIPMENT ||--o{ EQUIPMENT_ISSUE : "is issued"

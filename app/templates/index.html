@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="WoxuDB — Dashboard overview of members, teams, equipment and tournaments." />
+  <title>Dashboard — WoxuDB</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <div>
+        <span>WoxuDB<small>Management System</small></span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="/" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+      <a href="/reports" class="nav-item"><span class="nav-icon"></span> Reports</a>
+
+      <div class="nav-section-label">Club</div>
+      <a href="/members" class="nav-item"><span class="nav-icon"></span> Members</a>
+      <a href="/sports" class="nav-item"><span class="nav-icon"></span> Sports</a>
+      <a href="/teams" class="nav-item"><span class="nav-icon"></span> Teams</a>
+      <a href="/tournaments" class="nav-item"><span class="nav-icon"></span> Tournaments</a>
+
+      <div class="nav-section-label">Resources</div>
+      <a href="/equipment" class="nav-item"><span class="nav-icon"></span> Equipment</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Dashboard</div>
+        <div class="topbar-subtitle">WoxuDB Overview</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <!-- Stat Cards -->
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon"></div>
+          <div class="stat-value" id="stat-members">—</div>
+          <div class="stat-label">Active Members</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"></div>
+          <div class="stat-value" id="stat-teams">—</div>
+          <div class="stat-label">Teams</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon"></div>
+          <div class="stat-value" id="stat-tournaments">—</div>
+          <div class="stat-label">Tournaments</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon"></div>
+          <div class="stat-value" id="stat-equipment">—</div>
+          <div class="stat-label">Equipment Types</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon"></div>
+          <div class="stat-value" id="stat-overdue">—</div>
+          <div class="stat-label">Overdue Returns</div>
+        </div>
+      </div>
+
+      <div class="flex gap-4" style="flex-wrap: wrap;">
+        <!-- Active Members Table -->
+        <div class="card" style="flex:1; min-width:320px;">
+          <div class="card-header">
+            <span class="card-title">Active Members</span>
+            <a href="/members" class="btn btn-outline btn-sm">View All</a>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr>
+                <th>Name</th><th>Plan</th><th>Expires</th>
+              </tr></thead>
+              <tbody id="active-members-table">
+                <tr><td colspan="3" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Expiring Memberships -->
+        <div class="card" style="flex:1; min-width:280px;">
+          <div class="card-header">
+            <span class="card-title"> Expiring Soon</span>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr>
+                <th>Name</th><th>Days Left</th>
+              </tr></thead>
+              <tbody id="expiring-table">
+                <tr><td colspan="2" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex gap-4" style="flex-wrap: wrap;">
+        <!-- Equipment Status -->
+        <div class="card" style="flex:1; min-width:300px;">
+          <div class="card-header">
+            <span class="card-title">Equipment Status</span>
+            <a href="/equipment" class="btn btn-outline btn-sm">View All</a>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Item</th><th>Stock</th><th>Status</th></tr></thead>
+              <tbody id="equipment-table">
+                <tr><td colspan="3" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Revenue Summary -->
+        <div class="card" style="flex:1; min-width:260px;">
+          <div class="card-header">
+            <span class="card-title">Revenue by Plan</span>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Plan</th><th>Revenue</th></tr></thead>
+              <tbody id="revenue-table">
+                <tr><td colspan="2" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/main.js"></script>
+<script>
+(async function loadDashboard() {
+  try {
+    const [activeMembers, expiring, equipment, revenue, overdue, teams, tournaments] = await Promise.all([
+      apiGet('/reports/active-members'),
+      apiGet('/reports/expiring-memberships'),
+      apiGet('/reports/equipment-status'),
+      apiGet('/reports/revenue-by-plan'),
+      apiGet('/reports/overdue-equipment'),
+      apiGet('/teams'),
+      apiGet('/tournaments'),
+    ]);
+
+    document.getElementById('stat-members').textContent = activeMembers.length;
+    document.getElementById('stat-teams').textContent = teams.length;
+    document.getElementById('stat-tournaments').textContent = tournaments.length;
+    document.getElementById('stat-equipment').textContent = equipment.length;
+    document.getElementById('stat-overdue').textContent = overdue.length;
+
+    const amtBody = document.getElementById('active-members-table');
+    amtBody.innerHTML = activeMembers.slice(0, 8).map(m => `
+      <tr>
+        <td><span class="font-bold">${m.full_name}</span></td>
+        <td><span class="text-muted">${m.plan_name}</span></td>
+        <td>${formatDate(m.end_date)}</td>
+      </tr>`).join('') || '<tr><td colspan="3" class="empty-state">No active members</td></tr>';
+
+    const expBody = document.getElementById('expiring-table');
+    expBody.innerHTML = expiring.length ? expiring.map(m => `
+      <tr>
+        <td>${m.member_name}</td>
+        <td><span class="badge ${m.days_until_expiry <= 7 ? 'badge-danger' : 'badge-warning'}">${m.days_until_expiry}d</span></td>
+      </tr>`).join('')
+      : '<tr><td colspan="2"><div class="empty-state"><p>None expiring soon </p></div></td></tr>';
+
+    const eqBody = document.getElementById('equipment-table');
+    eqBody.innerHTML = equipment.slice(0, 6).map(e => `
+      <tr>
+        <td>${e.equipment_name}</td>
+        <td>${e.current_stock}/${e.total_stock}</td>
+        <td>${statusBadge(e.stock_status)}</td>
+      </tr>`).join('');
+
+    const revBody = document.getElementById('revenue-table');
+    revBody.innerHTML = revenue.map(r => `
+      <tr>
+        <td>${r.plan_name}</td>
+        <td class="font-bold">${formatCurrency(r.total_revenue)}</td>
+      </tr>`).join('');
+
+  } catch (err) {
+    showToast('Failed to load dashboard: ' + err.message, 'error');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Sports catalog — manage club sports."/>
+  <title>Sports — WoxuDB</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <div><span>WoxuDB<small>Management System</small></span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="/" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+      <a href="/reports" class="nav-item"><span class="nav-icon"></span> Reports</a>
+      <div class="nav-section-label">Club</div>
+      <a href="/members" class="nav-item"><span class="nav-icon"></span> Members</a>
+      <a href="/sports" class="nav-item"><span class="nav-icon"></span> Sports</a>
+      <a href="/teams" class="nav-item"><span class="nav-icon"></span> Teams</a>
+      <a href="/tournaments" class="nav-item"><span class="nav-icon"></span> Tournaments</a>
+      <div class="nav-section-label">Resources</div>
+      <a href="/equipment" class="nav-item"><span class="nav-icon"></span> Equipment</a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Sports</div>
+        <div class="topbar-subtitle">Club sports catalog</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('modal-add')">+ Add Sport</button>
+    </div>
+
+    <div class="page-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title">All Sports</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>ID</th><th>Sport Name</th><th>Actions</th></tr></thead>
+            <tbody id="sports-table"><tr><td colspan="3" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Sport</span>
+      <button class="modal-close" onclick="closeModal('modal-add')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="submitAdd(event)">
+        <div class="form-group">
+          <label class="form-label">Sport Name *</label>
+          <input class="form-control" id="add-name" required placeholder="e.g. Football"/>
+        </div>
+        <div class="modal-footer" style="padding:0;border:0;margin-top:8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/main.js"></script>
+<script>
+async function loadSports() {
+  try {
+    const sports = await apiGet('/sports/');
+    const tbody = document.getElementById('sports-table');
+    if (!sports.length) {
+      tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state"><div class="empty-icon"></div><p>No sports found</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = sports.map(s => `
+      <tr>
+        <td class="text-muted">#${s.sport_id}</td>
+        <td class="font-bold">${s.name}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteSport(${s.sport_id})"> Delete</button></td>
+      </tr>`).join('');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function submitAdd(e) {
+  e.preventDefault();
+  try {
+    await apiPost('/sports/', { name: document.getElementById('add-name').value });
+    closeModal('modal-add');
+    document.getElementById('add-name').value = '';
+    showToast('Sport added!', 'success');
+    loadSports();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteSport(id) {
+  if (!confirm('Delete this sport? This may fail if teams or equipment are assigned to it.')) return;
+  try {
+    await apiDelete('/sports/' + id);
+    showToast('Sport deleted.', 'warning');
+    loadSports();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+loadSports();
+</script>
+</body>
+</html>

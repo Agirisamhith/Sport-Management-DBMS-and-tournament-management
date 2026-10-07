@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Manage club teams, rosters, and assignments."/>
+  <title>Teams — WoxuDB</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <div><span>WoxuDB<small>Management System</small></span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="/" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+      <a href="/reports" class="nav-item"><span class="nav-icon"></span> Reports</a>
+      <div class="nav-section-label">Club</div>
+      <a href="/members" class="nav-item"><span class="nav-icon"></span> Members</a>
+      <a href="/sports" class="nav-item"><span class="nav-icon"></span> Sports</a>
+      <a href="/teams" class="nav-item"><span class="nav-icon"></span> Teams</a>
+      <a href="/tournaments" class="nav-item"><span class="nav-icon"></span> Tournaments</a>
+      <div class="nav-section-label">Resources</div>
+      <a href="/equipment" class="nav-item"><span class="nav-icon"></span> Equipment</a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Teams</div>
+        <div class="topbar-subtitle">Roster and team management</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('modal-add')">+ New Team</button>
+    </div>
+
+    <div class="page-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title">All Teams</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Team Name</th><th>Sport</th><th>Coach</th>
+              <th>Roster</th><th>Capacity</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="teams-table"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Create New Team</span>
+      <button class="modal-close" onclick="closeModal('modal-add')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="submitAdd(event)">
+        <div class="form-group">
+          <label class="form-label">Team Name *</label>
+          <input class="form-control" id="add-name" required placeholder="Thunder FC"/>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Sport *</label>
+            <select class="form-control" id="add-sport" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Coach</label>
+            <select class="form-control" id="add-coach"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Capacity *</label>
+          <input class="form-control" id="add-cap" type="number" min="1" value="20" required/>
+        </div>
+        <div class="modal-footer" style="padding:0;border:0;margin-top:8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Team</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/main.js"></script>
+<script>
+async function loadTeams() {
+  try {
+    const teams = await apiGet('/teams/');
+    const tbody = document.getElementById('teams-table');
+    if (!teams.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"></div><p>No teams yet</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = teams.map(t => `
+      <tr>
+        <td class="text-muted">#${t.team_id}</td>
+        <td class="font-bold">${t.name}</td>
+        <td>${t.sport_name}</td>
+        <td>${t.coach_name || '<span class="text-muted">Unassigned</span>'}</td>
+        <td>${t.current_size}</td>
+        <td>
+          <span class="${t.current_size >= t.max_capacity ? 'badge badge-danger' : 'badge badge-success'}">
+            ${t.current_size}/${t.max_capacity}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deleteTeam(${t.team_id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function loadFormData() {
+  const [sports, coaches] = await Promise.all([apiGet('/sports/'), apiGet('/coaches/')]);
+  document.getElementById('add-sport').innerHTML =
+    sports.map(s => `<option value="${s.sport_id}">${s.name}</option>`).join('');
+  document.getElementById('add-coach').innerHTML =
+    '<option value="">— None —</option>' +
+    coaches.map(c => `<option value="${c.coach_id}">${c.first_name} ${c.last_name} (${c.sport_name})</option>`).join('');
+}
+
+async function submitAdd(e) {
+  e.preventDefault();
+  try {
+    await apiPost('/teams/', {
+      name: document.getElementById('add-name').value,
+      sport_id: parseInt(document.getElementById('add-sport').value),
+      coach_id: parseInt(document.getElementById('add-coach').value) || null,
+      max_capacity: parseInt(document.getElementById('add-cap').value),
+    });
+    closeModal('modal-add');
+    showToast('Team created!', 'success');
+    loadTeams();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteTeam(id) {
+  if (!confirm('Delete this team?')) return;
+  try {
+    await apiDelete('/teams/' + id);
+    showToast('Team deleted.', 'warning');
+    loadTeams();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+loadFormData();
+loadTeams();
+</script>
+</body>
+</html>

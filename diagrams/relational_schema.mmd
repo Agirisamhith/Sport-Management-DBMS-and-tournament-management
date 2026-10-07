@@ -1,0 +1,138 @@
+mermaid
+erDiagram
+    members {
+        serial member_id PK
+        varchar first_name
+        varchar last_name
+        varchar email UK
+        varchar phone
+        date join_date
+    }
+    membership_plans {
+        serial plan_id PK
+        varchar name UK
+        text description
+        numeric price
+        integer duration_days
+    }
+    memberships {
+        serial membership_id PK
+        integer member_id FK
+        integer plan_id FK
+        date start_date
+        date end_date
+        varchar status
+    }
+    payments {
+        serial payment_id PK
+        integer member_id FK
+        numeric amount
+        date payment_date
+        varchar payment_method
+    }
+    sports {
+        serial sport_id PK
+        varchar name UK
+        text description
+    }
+    teams {
+        serial team_id PK
+        integer sport_id FK
+        varchar name
+        integer max_capacity
+    }
+    team_members {
+        integer team_id PK,FK
+        integer member_id PK,FK
+        date join_date
+    }
+    coaches {
+        serial coach_id PK
+        varchar first_name
+        varchar last_name
+        varchar email UK
+        varchar specialization
+    }
+    team_coaches {
+        integer team_id PK,FK
+        integer coach_id PK,FK
+        varchar role
+    }
+    facilities {
+        serial facility_id PK
+        varchar name UK
+        varchar facility_type
+        integer capacity
+    }
+    training_sessions {
+        serial session_id PK
+        integer facility_id FK
+        integer team_id FK
+        integer coach_id FK
+        timestamp start_time
+        timestamp end_time
+    }
+    tournaments {
+        serial tournament_id PK
+        integer sport_id FK
+        varchar name
+        date start_date
+        date end_date
+    }
+    fixtures {
+        serial fixture_id PK
+        integer tournament_id FK
+        integer facility_id FK
+        timestamp start_time
+        varchar status
+    }
+    fixture_participants {
+        serial participant_id PK
+        integer fixture_id FK
+        integer team_id FK
+        integer member_id FK
+    }
+    results {
+        serial result_id PK
+        integer fixture_id FK
+        integer participant_id FK
+        integer score
+        boolean is_winner
+    }
+    equipment {
+        serial equipment_id PK
+        varchar name
+        varchar category
+        integer total_stock
+        integer available_stock
+    }
+    equipment_issues {
+        serial issue_id PK
+        integer equipment_id FK
+        integer member_id FK
+        date issue_date
+        date return_date
+        varchar status
+    }
+
+    members ||--o{ memberships : "member_id"
+    membership_plans ||--o{ memberships : "plan_id"
+    members ||--o{ payments : "member_id"
+    sports ||--o{ teams : "sport_id"
+    teams ||--o{ team_members : "team_id"
+    members ||--o{ team_members : "member_id"
+    teams ||--o{ team_coaches : "team_id"
+    coaches ||--o{ team_coaches : "coach_id"
+    facilities ||--o{ training_sessions : "facility_id"
+    teams ||--o{ training_sessions : "team_id"
+    coaches ||--o{ training_sessions : "coach_id"
+    sports ||--o{ tournaments : "sport_id"
+    tournaments ||--o{ fixtures : "tournament_id"
+    facilities ||--o{ fixtures : "facility_id"
+    fixtures ||--o{ fixture_participants : "fixture_id"
+    teams ||--o{ fixture_participants : "team_id"
+    members ||--o{ fixture_participants : "member_id"
+    fixtures ||--o{ results : "fixture_id"
+    fixture_participants ||--o{ results : "participant_id"
+    members ||--o{ equipment_issues : "member_id"
+    equipment ||--o{ equipment_issues : "equipment_id"

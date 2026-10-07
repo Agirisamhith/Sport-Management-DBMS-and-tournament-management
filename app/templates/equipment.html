@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Equipment inventory management and issue tracking."/>
+  <title>Equipment — WoxuDB</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <div><span>WoxuDB<small>Management System</small></span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="/" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+      <a href="/reports" class="nav-item"><span class="nav-icon"></span> Reports</a>
+      <div class="nav-section-label">Club</div>
+      <a href="/members" class="nav-item"><span class="nav-icon"></span> Members</a>
+      <a href="/sports" class="nav-item"><span class="nav-icon"></span> Sports</a>
+      <a href="/teams" class="nav-item"><span class="nav-icon"></span> Teams</a>
+      <a href="/tournaments" class="nav-item"><span class="nav-icon"></span> Tournaments</a>
+      <div class="nav-section-label">Resources</div>
+      <a href="/equipment" class="nav-item"><span class="nav-icon"></span> Equipment</a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Equipment</div>
+        <div class="topbar-subtitle">Inventory and loan management</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline" onclick="openModal('modal-issue')"> Issue Equipment</button>
+        <button class="btn btn-primary" onclick="openModal('modal-add')">+ Add Item</button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="flex gap-4" style="flex-wrap:wrap;">
+        <!-- Inventory -->
+        <div class="card" style="flex:2; min-width:320px;">
+          <div class="card-header">
+            <span class="card-title">Inventory</span>
+            <div class="search-bar" style="width:200px;">
+              <span class="search-icon"></span>
+              <input type="text" placeholder="Search…" oninput="filterEquipment(this.value)"/>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Name</th><th>Sport</th><th>Available</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="equip-table"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Active Issues -->
+        <div class="card" style="flex:1; min-width:280px;">
+          <div class="card-header"><span class="card-title">Active Loans</span></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Member</th><th>Item</th><th>Due</th><th>Action</th></tr></thead>
+              <tbody id="issues-table"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Equipment Modal -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Equipment</span>
+      <button class="modal-close" onclick="closeModal('modal-add')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="submitAdd(event)">
+        <div class="form-group">
+          <label class="form-label">Equipment Name *</label>
+          <input class="form-control" id="add-name" required placeholder="Tennis Racket"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sport *</label>
+          <select class="form-control" id="add-sport" required></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Total Stock *</label>
+            <input class="form-control" id="add-total" type="number" min="0" required value="0"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Current Stock *</label>
+            <input class="form-control" id="add-current" type="number" min="0" required value="0"/>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding:0;border:0;margin-top:8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Issue Equipment Modal -->
+<div class="modal-overlay" id="modal-issue">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Issue Equipment</span>
+      <button class="modal-close" onclick="closeModal('modal-issue')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="submitIssue(event)">
+        <div class="form-group">
+          <label class="form-label">Equipment *</label>
+          <select class="form-control" id="issue-equip" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Member *</label>
+          <select class="form-control" id="issue-member" required></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Quantity *</label>
+            <input class="form-control" id="issue-qty" type="number" min="1" value="1" required/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Return *</label>
+            <input class="form-control" id="issue-return" type="date" required/>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding:0;border:0;margin-top:8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-issue')">Cancel</button>
+          <button type="submit" class="btn btn-success">Issue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/main.js"></script>
+<script>
+let allEquip = [];
+
+async function loadEquipment() {
+  try {
+    allEquip = await apiGet('/equipment/');
+    renderEquip(allEquip);
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function renderEquip(items) {
+  const tbody = document.getElementById('equip-table');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon"></div><p>No equipment found</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(e => `
+    <tr>
+      <td class="font-bold">${e.name}</td>
+      <td>${e.sport_name}</td>
+      <td>${e.current_stock}</td>
+      <td>${e.total_stock}</td>
+      <td>${statusBadge(e.current_stock === 0 ? 'Out of Stock' : e.current_stock <= e.total_stock * 0.2 ? 'Low Stock' : 'Available')}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteEquip(${e.equipment_id})">Delete</button></td>
+    </tr>`).join('');
+}
+
+function filterEquipment(q) {
+  renderEquip(allEquip.filter(e => e.name.toLowerCase().includes(q.toLowerCase())));
+}
+
+async function loadIssues() {
+  try {
+    const issues = await apiGet('/equipment/issues/all');
+    const active = issues.filter(i => i.status === 'On Loan');
+    const tbody = document.getElementById('issues-table');
+    if (!active.length) {
+      tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>No active loans </p></div></td></tr>';
+      return;
+    }
+    const today = new Date();
+    tbody.innerHTML = active.map(i => {
+      const due = new Date(i.expected_return_date);
+      const overdue = due < today;
+      return `<tr>
+        <td>${i.member_name}</td>
+        <td>${i.equipment_name} ×${i.quantity}</td>
+        <td><span class="${overdue ? 'badge badge-danger' : 'badge badge-warning'}">${formatDate(i.expected_return_date)}</span></td>
+        <td><button class="btn btn-success btn-sm" onclick="returnEquip(${i.issue_id})"> Return</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function loadFormData() {
+  const [equip, members, sports] = await Promise.all([
+    apiGet('/equipment/'), apiGet('/members/'), apiGet('/sports/')
+  ]);
+  document.getElementById('issue-equip').innerHTML =
+    equip.map(e => `<option value="${e.equipment_id}">${e.name} (stock: ${e.current_stock})</option>`).join('');
+  document.getElementById('issue-member').innerHTML =
+    members.map(m => `<option value="${m.member_id}">${m.first_name} ${m.last_name}</option>`).join('');
+  document.getElementById('add-sport').innerHTML =
+    sports.map(s => `<option value="${s.sport_id}">${s.name}</option>`).join('');
+}
+
+async function submitAdd(e) {
+  e.preventDefault();
+  try {
+    await apiPost('/equipment/', {
+      name: document.getElementById('add-name').value,
+      sport_id: parseInt(document.getElementById('add-sport').value),
+      total_stock: parseInt(document.getElementById('add-total').value),
+      current_stock: parseInt(document.getElementById('add-current').value),
+    });
+    closeModal('modal-add');
+    showToast('Equipment added!', 'success');
+    loadEquipment();
+    loadFormData();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function submitIssue(e) {
+  e.preventDefault();
+  try {
+    await apiPost('/equipment/issues', {
+      equipment_id: parseInt(document.getElementById('issue-equip').value),
+      member_id: parseInt(document.getElementById('issue-member').value),
+      quantity: parseInt(document.getElementById('issue-qty').value),
+      expected_return_date: document.getElementById('issue-return').value,
+    });
+    closeModal('modal-issue');
+    showToast('Equipment issued successfully!', 'success');
+    loadEquipment();
+    loadIssues();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function returnEquip(issueId) {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await apiPatch(`/equipment/issues/${issueId}/return`, { actual_return_date: today });
+    showToast('Equipment returned!', 'success');
+    loadEquipment();
+    loadIssues();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteEquip(id) {
+  if (!confirm('Delete this equipment item?')) return;
+  try {
+    await apiDelete('/equipment/' + id);
+    showToast('Deleted.', 'warning');
+    loadEquipment();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+loadFormData();
+loadEquipment();
+loadIssues();
+</script>
+</body>
+</html>

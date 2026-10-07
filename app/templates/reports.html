@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Analytical reports for the WoxuDB."/>
+  <title>Reports — WoxuDB</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"></div>
+      <div><span>WoxuDB<small>Management System</small></span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="/" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+      <a href="/reports" class="nav-item"><span class="nav-icon"></span> Reports</a>
+      <div class="nav-section-label">Club</div>
+      <a href="/members" class="nav-item"><span class="nav-icon"></span> Members</a>
+      <a href="/sports" class="nav-item"><span class="nav-icon"></span> Sports</a>
+      <a href="/teams" class="nav-item"><span class="nav-icon"></span> Teams</a>
+      <a href="/tournaments" class="nav-item"><span class="nav-icon"></span> Tournaments</a>
+      <div class="nav-section-label">Resources</div>
+      <a href="/equipment" class="nav-item"><span class="nav-icon"></span> Equipment</a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Reports</div>
+        <div class="topbar-subtitle">Analytical data views</div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <!-- Tab Navigation -->
+      <div class="flex gap-2 mb-6" style="flex-wrap:wrap;" id="report-tabs">
+        <button class="btn btn-primary btn-sm" onclick="showReport('active-members', this)"> Active Members</button>
+        <button class="btn btn-outline btn-sm" onclick="showReport('revenue', this)"> Revenue</button>
+        <button class="btn btn-outline btn-sm" onclick="showReport('overdue', this)"> Overdue Returns</button>
+        <button class="btn btn-outline btn-sm" onclick="showReport('tournament', this)"> Tournament Results</button>
+        <button class="btn btn-outline btn-sm" onclick="showReport('expiring', this)"> Expiring Memberships</button>
+        <button class="btn btn-outline btn-sm" onclick="showReport('roster', this)"> Team Roster</button>
+      </div>
+
+      <!-- Active Members -->
+      <div id="rpt-active-members" class="card">
+        <div class="card-header"><span class="card-title">Active Members Report</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Start</th><th>Expires</th><th>Days Left</th></tr></thead>
+            <tbody id="tbl-active-members"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Revenue -->
+      <div id="rpt-revenue" class="card" style="display:none;">
+        <div class="card-header"><span class="card-title">Revenue by Membership Plan</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Plan</th><th>Total Payments</th><th>Total Revenue</th><th>Avg Payment</th></tr></thead>
+            <tbody id="tbl-revenue"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Overdue -->
+      <div id="rpt-overdue" class="card" style="display:none;">
+        <div class="card-header"><span class="card-title">Overdue Equipment Returns</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Issue#</th><th>Member</th><th>Email</th><th>Item</th><th>Qty</th><th>Due Date</th><th>Days Overdue</th></tr></thead>
+            <tbody id="tbl-overdue"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tournament Results -->
+      <div id="rpt-tournament" class="card" style="display:none;">
+        <div class="card-header"><span class="card-title">Tournament Results Leaderboard</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Tournament</th><th>Sport</th><th>Rank</th><th>Team</th><th>Score</th><th>Match Time</th></tr></thead>
+            <tbody id="tbl-tournament"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Expiring -->
+      <div id="rpt-expiring" class="card" style="display:none;">
+        <div class="card-header"><span class="card-title">Memberships Expiring in 30 Days</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Member</th><th>Email</th><th>Plan</th><th>Expires</th><th>Days Left</th></tr></thead>
+            <tbody id="tbl-expiring"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Roster -->
+      <div id="rpt-roster" class="card" style="display:none;">
+        <div class="card-header"><span class="card-title">Team Roster Report</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Team</th><th>Sport</th><th>Coach</th><th>Member</th><th>Joined</th><th>Size/Cap</th></tr></thead>
+            <tbody id="tbl-roster"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/static/main.js"></script>
+<script>
+function showReport(name, btn) {
+  document.querySelectorAll('[id^="rpt-"]').forEach(el => el.style.display = 'none');
+  document.getElementById('rpt-' + name).style.display = 'block';
+  document.querySelectorAll('#report-tabs .btn').forEach(b => b.className = 'btn btn-outline btn-sm');
+  btn.className = 'btn btn-primary btn-sm';
+}
+
+async function loadAll() {
+  try {
+    const [active, revenue, overdue, tournament, expiring, roster] = await Promise.all([
+      apiGet('/reports/active-members'),
+      apiGet('/reports/revenue-by-plan'),
+      apiGet('/reports/overdue-equipment'),
+      apiGet('/reports/tournament-results'),
+      apiGet('/reports/expiring-memberships'),
+      apiGet('/reports/team-roster'),
+    ]);
+
+    document.getElementById('tbl-active-members').innerHTML = active.length ?
+      active.map(r => `<tr>
+        <td class="font-bold">${r.full_name}</td><td>${r.email}</td>
+        <td>${r.plan_name}</td><td>${formatDate(r.start_date)}</td>
+        <td>${formatDate(r.end_date)}</td>
+        <td><span class="badge ${r.days_remaining <= 30 ? 'badge-warning' : 'badge-success'}">${r.days_remaining}d</span></td>
+      </tr>`).join('') :
+      '<tr><td colspan="6"><div class="empty-state"><p>No active members</p></div></td></tr>';
+
+    document.getElementById('tbl-revenue').innerHTML = revenue.map(r => `<tr>
+      <td class="font-bold">${r.plan_name}</td>
+      <td>${r.total_payments}</td>
+      <td class="font-bold">${formatCurrency(r.total_revenue)}</td>
+      <td>${formatCurrency(r.avg_payment)}</td>
+    </tr>`).join('');
+
+    document.getElementById('tbl-overdue').innerHTML = overdue.length ?
+      overdue.map(r => `<tr>
+        <td>#${r.issue_id}</td><td>${r.member_name}</td><td>${r.email}</td>
+        <td>${r.equipment_name}</td><td>${r.quantity}</td>
+        <td>${formatDate(r.expected_return_date)}</td>
+        <td><span class="badge badge-danger">${r.days_overdue}d overdue</span></td>
+      </tr>`).join('') :
+      '<tr><td colspan="7"><div class="empty-state"><p>No overdue returns </p></div></td></tr>';
+
+    document.getElementById('tbl-tournament').innerHTML = tournament.length ?
+      tournament.map(r => `<tr>
+        <td class="font-bold">${r.tournament_name}</td><td>${r.sport}</td>
+        <td><span class="badge ${r.team_rank === 1 ? 'badge-warning' : 'badge-info'}">
+          ${r.team_rank === 1 ? '' : r.team_rank === 2 ? '' : ''} #${r.team_rank}
+        </span></td>
+        <td>${r.team_name}</td>
+        <td class="font-bold">${r.score}</td>
+        <td>${formatDateTime(r.match_time)}</td>
+      </tr>`).join('') :
+      '<tr><td colspan="6"><div class="empty-state"><p>No results yet</p></div></td></tr>';
+
+    document.getElementById('tbl-expiring').innerHTML = expiring.length ?
+      expiring.map(r => `<tr>
+        <td class="font-bold">${r.member_name}</td><td>${r.email}</td>
+        <td>${r.plan_name}</td><td>${formatDate(r.end_date)}</td>
+        <td><span class="badge ${r.days_until_expiry <= 7 ? 'badge-danger' : 'badge-warning'}">${r.days_until_expiry}d</span></td>
+      </tr>`).join('') :
+      '<tr><td colspan="5"><div class="empty-state"><p>No memberships expiring soon </p></div></td></tr>';
+
+    document.getElementById('tbl-roster').innerHTML = roster.map(r => `<tr>
+      <td class="font-bold">${r.team_name}</td><td>${r.sport}</td>
+      <td>${r.coach || '—'}</td><td>${r.member_name}</td>
+      <td>${formatDate(r.joined_date)}</td>
+      <td><span class="badge ${r.current_size >= r.max_capacity ? 'badge-danger' : 'badge-success'}">${r.current_size}/${r.max_capacity}</span></td>
+    </tr>`).join('');
+
+  } catch(e) { showToast('Error loading reports: ' + e.message, 'error'); }
+}
+
+loadAll();
+</script>
+</body>
+</html>
