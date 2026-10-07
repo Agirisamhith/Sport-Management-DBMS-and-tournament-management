@@ -1,4 +1,5 @@
 # Sports Club Membership & Tournament Management System
+Authors - Sai Samhith (25WU0101008) ,  Likhith Ram (25WU0101038) , Vidhathreya (25WU0101040)
 
 A PostgreSQL-based Database Management System designed to manage sports club memberships, payments, teams, coaches, facilities, tournaments, fixtures, and equipment.
 
